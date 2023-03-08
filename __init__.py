@@ -11,7 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import requests
+import urllib.request
+import json
 import bpy
 bl_info = {
     "name": "BPY Chat GPT",
@@ -102,9 +103,6 @@ class GPT_PT_MainPanel(bpy.types.Panel):
         row.prop(gpt, 'chat_gpt_input', text='')
         row.operator('gpt.send_message', text='', icon='PLAY')
 
-        for i in range(len(gpt.chat_history)-1, -1, -1):
-            self.draw_history_item(layout, gpt.chat_history[i])
-
 
 def process_message(message: str) -> str:
     """Process the message to make it more readable"""
@@ -145,9 +143,15 @@ def request_answer(text: str) -> str:
         "temperature": 0,
     }
     headers = {
-        "Authorization": f"Bearer {bpy.context.preferences.addons[__name__].preferences.api_key}"}
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {bpy.context.preferences.addons[__name__].preferences.api_key}",
+    }
 
-    answer = requests.post(f"{ENDPOINT}", headers=headers, json=data).json()
+    req = urllib.request.Request(ENDPOINT, json.dumps(data).encode(), headers)
+
+    with urllib.request.urlopen(req) as response:
+        answer = json.loads(response.read().decode())
+
     if 'error' in answer:
         raise Exception(answer['error']['message'])
 
